@@ -1,0 +1,32 @@
+{
+  "name": "bkmrkr",
+  "version": "1.0.0",
+  "description": "Bookmark manager",
+  "author": "John D. Lewis",
+  "license": "MIT",
+  "homepage": "https://github.com/balain/bkmrkr",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/balain/bkmrkr.git"
+  },
+  "bugs": {
+    "url": "https://github.com/balain/bkmrkr/issues"
+  },
+  "dependencies": {
+    "@meltwater/fetch-favicon": "^1.0.4",
+    "bcrypt": "^5.0.0",
+    "body-parser": "^1.19.0",
+    "config": "^3.3.3",
+    "connect-ensure-login": "^0.1.1",
+    "ejs": "^2.6.2",
+    "express": "^4.17.1",
+    "express-session": "^1.16.1",
+    "got": "^11.8.2",
+    "jsdom": "^16.4.0",
+    "morgan": "^1.9.1",
+    "node-html-parser": "^3.0.3",
+    "passport": "^0.4.0",
+    "passport-local": "^1.0.0",
+    "sqlite3": "^5.0.2"
+  }
+}
