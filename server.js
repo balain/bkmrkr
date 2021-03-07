@@ -12,8 +12,8 @@ var express = require('express')
 var session = require('express-session')
 var RateLimit = require('express-rate-limit')
 var limiter = new RateLimit({
-  windowMs: 1 * 60 * 1000,
-  max: 5
+  windowMs: 15 * 60 * 1000,
+  max: 50
 })
 
 var passport = require('passport')
