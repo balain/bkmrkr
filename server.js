@@ -10,6 +10,12 @@ const { JSDOM } = jsdom
 
 var express = require('express')
 var session = require('express-session')
+var RateLimit = require('express-rate-limit')
+var limiter = new RateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 5
+})
+
 var passport = require('passport')
 var Strategy = require('passport-local').Strategy
 const ensureLoggedIn = require('connect-ensure-login').ensureLoggedIn
@@ -93,6 +99,7 @@ passport.deserializeUser(function(id, cb) {
 });
 
 var app = express();
+app.use(limiter);
 
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
@@ -336,27 +343,31 @@ app.get('/bkmrkr/latest',
         req.user.username
       ], (err, rows) => {
         res.write(startHtml('Latest 100 Bookmarks'))
-        res.write(`<ul>`)
-        rows.forEach((row) => {
-          const dCreated = new Date(+row.created)
-          let dRead = new Date(+row.toread)
-          if (dRead.getFullYear() == 2021) {
-            dRead = `${dRead.getMonth()+1}/${dRead.getDate()}`
-          } else {
-            dRead = dRead.toLocaleDateString("en-US")
-          }
-          let favicon = ""
-          if (row.favicon) {
-            favicon = `<img src='${row.favicon}' width='10px'>`
-          }
+        if (rows && rows.length) {
+          res.write(`<ul>`)
+          rows.forEach((row) => {
+            const dCreated = new Date(+row.created)
+            let dRead = new Date(+row.toread)
+            if (dRead.getFullYear() == 2021) {
+              dRead = `${dRead.getMonth() + 1}/${dRead.getDate()}`
+            } else {
+              dRead = dRead.toLocaleDateString("en-US")
+            }
+            let favicon = ""
+            if (row.favicon) {
+              favicon = `<img src='${row.favicon}' width='10px'>`
+            }
 
-          if (row.hash) {
-            res.write(`<li><a href='./visit/${row.hash}' target='_blank'>${favicon}${row.title ? row.title : row.url}</a> (+:${dCreated.getFullYear() == 2021 ? `${dCreated.getMonth()+1}/${dCreated.getDate()}` : dCreated.toLocaleDateString("en-US")}${row.toread && row.toread.length == 13 ? `; &#128065: ${dRead}` : ''})`)
-          } else {
-            res.write(`<li><a href='./visitlink/${encodeURIComponent(row.url)}' target='_blank'>${favicon}${row.title ? row.title : row.url}</a> (+:${dCreated.getFullYear() == 2021 ? `${dCreated.getMonth()+1}/${dCreated.getDate()}` : dCreated.toLocaleDateString("en-US")}${row.toread && row.toread.length == 13 ? `; &#128065: ${dRead}` : ''})`)
-          }
-        })
-        res.write(`</ul>`)
+            if (row.hash) {
+              res.write(`<li><a href='./visit/${row.hash}' target='_blank'>${favicon}${row.title ? row.title : row.url}</a> (+:${dCreated.getFullYear() == 2021 ? `${dCreated.getMonth() + 1}/${dCreated.getDate()}` : dCreated.toLocaleDateString("en-US")}${row.toread && row.toread.length == 13 ? `; &#128065: ${dRead}` : ''})`)
+            } else {
+              res.write(`<li><a href='./visitlink/${encodeURIComponent(row.url)}' target='_blank'>${favicon}${row.title ? row.title : row.url}</a> (+:${dCreated.getFullYear() == 2021 ? `${dCreated.getMonth() + 1}/${dCreated.getDate()}` : dCreated.toLocaleDateString("en-US")}${row.toread && row.toread.length == 13 ? `; &#128065: ${dRead}` : ''})`)
+            }
+          })
+          res.write(`</ul>`)
+        } else {
+          res.write(`<em>No bookmarks found</em>`)
+        }
         res.write(endHtml())
         res.end()
     })
