@@ -301,25 +301,6 @@ app.get('/bkmrkr/visit/:hash',
   }
 )
 
-app.get('/bkmrkr/visitlink/:link',
-  ensureLoggedIn('/bkmrkr/login'),
-  (req, res) => {
-    if (req.params.link && req.params.link.length > 6) {
-      const link = decodeURIComponent(req.params.link)
-      debug(`link is ok! ${link}`)
-      const sqlUpdate = `UPDATE bkmrks SET toread='${new Date().getTime()}' WHERE url='${link}';`
-      debug(`sqlUpdate: ${sqlUpdate}`)
-      bkmrksDb.run(sqlUpdate, [], err => {
-        debug(`redirecting to ${link}`)
-        res.redirect(link)
-      })
-    } else {
-      console.error(`Invalid hash supplied: ${req.params.hash}`)
-      res.send({err: `Invalid hash`})
-    }
-  }
-)
-
 app.get('/bkmrkr/count',
   ensureLoggedIn('/bkmrkr/login'),
   (req, res) => {
