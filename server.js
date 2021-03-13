@@ -16,6 +16,8 @@ var limiter = new RateLimit({
   max: 50
 })
 
+const DEFAULT_RECORD_COUNT = 20
+
 var passport = require('passport')
 var Strategy = require('passport-local').Strategy
 const ensureLoggedIn = require('connect-ensure-login').ensureLoggedIn
@@ -333,18 +335,70 @@ app.get('/bkmrkr/list',
   }
 )
 
-app.get('/bkmrkr/latest',
+function formatEntry(row, format = 'card') {
+  let favicon = ''
+  switch (format) {
+    case 'card':
+      favicon = row.favicon ? `<img src='${row.favicon}' alt='${row.title}' width='60px' height='60px'>` : ''
+
+      return `
+        <div class='col-sm-3'>
+        <div class="card mb-3">
+        <div class='row g-0'>
+        <div class='col-md-4'>
+        ${favicon}
+        </div>
+        <div class='col-md-8'>
+        <div class='card-body'>
+          <p class='card-text small'><a href='./visit/${row.hash}' target='_blank'>${row.title ? row.title : row.url}</a>${row.toread && row.toread.length == 13 ? `&#128065` : ''}
+          </p>
+          </div>
+        </div>
+        </div>
+        </div>
+        </div>`
+    case 'list':
+      const dCreated = new Date(+row.created)
+      let dRead = new Date(+row.toread)
+      if (dRead.getFullYear() == 2021) {
+        dRead = `${dRead.getMonth() + 1}/${dRead.getDate()}`
+      } else {
+        dRead = dRead.toLocaleDateString("en-US")
+      }
+
+      favicon = row.favicon ? `<span style='padding: 0px 4px 0px 4px'><img src='${row.favicon}' width='20px' height='20px'></span>` : ''
+
+      return `<li><a href='./visit/${row.hash}' target='_blank'>${favicon}${row.title ? row.title : row.url}</a> (+:${dCreated.getFullYear() == 2021 ? `${dCreated.getMonth() + 1}/${dCreated.getDate()}` : dCreated.toLocaleDateString("en-US")}${row.toread && row.toread.length == 13 ? `; &#128065: ${dRead}` : ''})`
+    default:
+      return `Unrecognized format: ${format}`
+  }
+}
+
+app.get('/bkmrkr/display',
   ensureLoggedIn('/bkmrkr/login'),
   (req, res) => {
-    debug(`req.user: `, req.user ? req.user.username : '')
+    const showAll = req.query.showAll && req.query.showAll == 'yes' ? true : false
+    const showCount = req.query.limit ? req.query.limit : DEFAULT_RECORD_COUNT
+    const offset = req.query.offset ? req.query.offset : 0
+    const listFormat = req.query.format && req.query.format == 'list' ? 'list' : 'card'
+
     res.type(`html`)
-    bkmrksDb.all("SELECT url, title, hash, toread, favicon, created FROM bkmrks WHERE user = ? ORDER BY created DESC LIMIT 100;",
+    const mainSql = `SELECT url, title, hash, toread, favicon, created FROM bkmrks WHERE user = ? ${showAll ? '' : ` AND (toread is null OR toread = 'yes')`} ORDER BY created DESC LIMIT ${showCount} OFFSET ${offset};`
+    debug(`mainSql: ${mainSql}`)
+    bkmrksDb.all(mainSql,
       [
         req.user.username
       ], (err, rows) => {
-        res.write(startHtml('Latest 100 Bookmarks'))
+        res.write(startHtml(`Bookmarks`, listFormat, offset, showAll))
+
         if (rows && rows.length) {
-          res.write(`<ul>`)
+
+          if (listFormat == 'card') {
+            res.write(`\n<div class='row'>\n`)
+          } else if (listFormat == 'list') {
+            res.write(`<ul class='list-unstyled'>`)
+          }
+
           rows.forEach((row) => {
             const dCreated = new Date(+row.created)
             let dRead = new Date(+row.toread)
@@ -353,20 +407,24 @@ app.get('/bkmrkr/latest',
             } else {
               dRead = dRead.toLocaleDateString("en-US")
             }
-            let favicon = ""
-            if (row.favicon) {
-              favicon = `<img src='${row.favicon}' width='10px'>`
-            }
 
-            if (row.hash) {
-              res.write(`<li><a href='./visit/${row.hash}' target='_blank'>${favicon}${row.title ? row.title : row.url}</a> (+:${dCreated.getFullYear() == 2021 ? `${dCreated.getMonth() + 1}/${dCreated.getDate()}` : dCreated.toLocaleDateString("en-US")}${row.toread && row.toread.length == 13 ? `; &#128065: ${dRead}` : ''})`)
-            } else {
-              res.write(`<li><a href='./visitlink/${encodeURIComponent(row.url)}' target='_blank'>${favicon}${row.title ? row.title : row.url}</a> (+:${dCreated.getFullYear() == 2021 ? `${dCreated.getMonth() + 1}/${dCreated.getDate()}` : dCreated.toLocaleDateString("en-US")}${row.toread && row.toread.length == 13 ? `; &#128065: ${dRead}` : ''})`)
-            }
+            res.write(formatEntry(row, listFormat))
+
           })
-          res.write(`</ul>`)
+          res.write(`</div>`)
+          res.write(`<hr>`)
+          if (offset > 0) {
+            res.write(`<a class='btn btn-outline-primary btn-sm' href='?format=${listFormat}&offset=0&showAll=${showAll}'>First page</a>`)
+          }
+
+          res.write(`<a class='btn btn-success btn-sm' href='?format=${listFormat}&offset=${+offset + DEFAULT_RECORD_COUNT}&showAll=${showAll}'>Next page</a>
+          <a class='btn btn-warn btn-sm text-right' href='?format=${listFormat == 'card' ? 'list' : 'card'}&offset=${offset}&showAll=${showAll}'>Switch Format</a>
+          `)
         } else {
           res.write(`<em>No bookmarks found</em>`)
+        }
+        if (listFormat == 'list') {
+          res.write(`</ul>`)
         }
         res.write(endHtml())
         res.end()
@@ -374,8 +432,10 @@ app.get('/bkmrkr/latest',
   }
 )
 
-function startHtml(title = '') {
-  return (`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous"><title>${title}</title> </head> <body> <h1>${title}</h1>`)
+function startHtml(title = '', listFormat = 'card', offset = 0, showAll = 'no') {
+  return (`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous"><title>${title}</title> </head> <body>
+  <div class='text-right sticky-top' style = 'top: 0; left: 0; text-align: right;' > <button type='button' class='btn btn-primary btn-sm'><a class='btn btn-primary btn-sm' href='?format=${listFormat}&offset=${offset}&${showAll ? ' showAll=no' : 'showAll=yes'}'>${showAll ? 'Show Unread Only' : 'Show All'}</a></button ></div>
+  <h1>${title.length ? `${title} [${offset}-${+offset + DEFAULT_RECORD_COUNT}]` : ''}</h1>`)
 }
 
 function endHtml() {
