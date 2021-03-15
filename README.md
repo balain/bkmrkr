@@ -27,16 +27,17 @@ So I created this simple node app to save *my* bookmarks. It takes just a few mi
 1. Create the database: `sqlite bkmrks.db < bkmrks.sql` (Note: change to the _dbFile_ location as set in the configuration file. See below.)
 1. Configure the server
    * Required
-      1. Rename `default-template.json` to `default.json`
+      1. Rename template config file `default-template.json` to `default.json`
       1. Set the _sessionKey_ with any unique string
       1. Set the _port_ to an open port value (default: 8000)
       1. Set _dbFile_ as the database name (default: `./data/bkmrks.sqlite`)      
       1. Set _cookie.maxAgeDays_ (default: 7)
 
    * Optional
-       1. Set _cookie.domain_ to your domain. (Delete this entry if you don't want to set it.)
-       1. Set _useHttps_ to _true_ (default: false)
-       1. Set _contact_ with an email address (must be set in the header to add links to https://crates.io)
+       1. Set _cookie.domain_ to your domain. (Delete this entry if you don't want to set it. Default: none)
+       1. Set _useHttps_ to _true_ (Default: false)
+       1. Set _contact_ with an email address (must be set in the header to add links to https://crates.io. Default: none)
+       1. Set _useTecITBarcodeGenerator_ to _true_ to display Data Matrix barcode for each bookmark - useful for printing bookmarks or opening bookmarks from a phone. (Default: false)
 
 1. Add the node modules: `npm i`
 1. Start the server: `node server.js`
@@ -47,10 +48,11 @@ So I created this simple node app to save *my* bookmarks. It takes just a few mi
 ### Display all bookmarks
 * `/bkmrkr/display`
    * Required Parameters: None
-   * Optional Parameters
+   * Optional Parameters [If provided, they override any config settings.]
       * `format`: Either `card` (Bootstrap cards) or `list` (UL). (Default: `card`)
       * `offset`: Database row to start. (Default: 0)
       * `showAll`: Show all (i.e. seen (i.e. `ToRead` is a date value) and unseen (i.e. `ToRead` is `no` or `null`). Either `yes` or `no`. (Default: `no`)
+      * `barcode`: Show Data Matrix barcode (provided by [https://www.tec-it.com](TEC-IT Barcode Generator)). (Default: `no`)
 
 ### Add a bookmark
 * `/bkmrkr/add`
