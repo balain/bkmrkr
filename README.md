@@ -1,13 +1,6 @@
 # bkmrkr
 Private and personal bookmark manager
 
-## Motivation
-I've been a pinboard.in user for 10 years. I have really enjoyed the service and appreciate that it was so cheap to join back then. Recently, the creator of that service asked me (and others who had paid a one-time fee) to switch to a subscription model. A completely reasonable request/model that will help him continue to develop and enhance the application.
-
-If you want social networking and don't mind a "no-frills" service, pinboard.in is really great. It's cheap, easy to use, and rock solid. And he's promising more features. But it bills itself as "Social Bookmarking for Introverts" - and I don't need the "Social" part. In fact, I don't want my bookmarks in a service that is advertised and designed to be shared.
-
-So I created this simple node app to save *my* bookmarks. It takes just a few minutes to set up and works great for me, without having to set all my bookmarks to "private" by default or ignoring how many other people have already bookmarked what I just added. If this is what you want, feel free to download and set up this app for yourself.
-
 ## Features
 * Local, password-protected bookmark storage (in a sqlite3 database)
 * HTML for each bookmark is fetched and the metadata is cached locally (the filename is hashed)
@@ -15,6 +8,7 @@ So I created this simple node app to save *my* bookmarks. It takes just a few mi
 * Simple view of the latest 100 bookmarks with an "added" date & a "seen" flag/date
 * Multi-user (Note: there is _no_ connection between users (and there never will be). See "What is missing?" below.)
 * URL-shortening: For bookmarks, you can access the bookmark by visiting `.../n/<id>` where `<id>` is the [nanoid](https://github.com/ai/nanoid) for that URL.
+* Data Matrix barcode for each bookmark (optional).
 
 ### What is missing?
 * Social networking features: This tool is not meant to connect people. (See "Motivation" above for explanation.)
@@ -52,7 +46,7 @@ So I created this simple node app to save *my* bookmarks. It takes just a few mi
       * `format`: Either `card` (Bootstrap cards) or `list` (UL). (Default: `card`)
       * `offset`: Database row to start. (Default: 0)
       * `showAll`: Show all (i.e. seen (i.e. `ToRead` is a date value) and unseen (i.e. `ToRead` is `no` or `null`). Either `yes` or `no`. (Default: `no`)
-      * `barcode`: Show Data Matrix barcode (provided by [https://www.tec-it.com](TEC-IT Barcode Generator)). (Default: `no`)
+      * `barcode`: Show Data Matrix barcode (provided by [TEC-IT Barcode Generator](https://www.tec-it.com)). (Default: `no`)
 
 ### Add a bookmark
 * `/bkmrkr/add`
@@ -97,6 +91,13 @@ const nanoid = customAlphabet(alphabet, 8);
 ```
 
 See [customer alphabet or size](https://github.com/ai/nanoid/#custom-alphabet-or-size) in the nanoid README for more info. According to the [Nano ID CC](https://zelark.github.io/nano-id-cc/), with this configuration "~159 years [are] needed, in order to have a 1% probability of at least one collision"
+
+# Motivation
+I've been a pinboard.in user for 10 years. I have really enjoyed the service and appreciate that it was so cheap to join back then. Recently, the creator of that service asked me (and others who had paid a one-time fee) to switch to a subscription model. A completely reasonable request/model that will help him continue to develop and enhance the application.
+
+If you want social networking and don't mind a "no-frills" service, pinboard.in is really great. It's cheap, easy to use, and rock solid. And he's promising more features. But it bills itself as "Social Bookmarking for Introverts" - and I don't need the "Social" part. In fact, I don't want my bookmarks in a service that is advertised and designed to be shared.
+
+So I created this simple node app to save *my* bookmarks. It takes just a few minutes to set up and works great for me, without having to set all my bookmarks to "private" by default or ignoring how many other people have already bookmarked what I just added. If this is what you want, feel free to download and set up this app for yourself.
 
 # License
 MIT. See the LICENSE file for the full license.
