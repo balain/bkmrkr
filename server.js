@@ -8,6 +8,10 @@ const fs = require('fs')
 const jsdom = require('jsdom')
 const { JSDOM } = jsdom
 
+const { customAlphabet } = require('nanoid');
+const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnopqrstuvwxyz';
+const nanoid = customAlphabet(alphabet, 8);
+
 var express = require('express')
 var session = require('express-session')
 var RateLimit = require('express-rate-limit')
@@ -240,13 +244,16 @@ app.get('/bkmrkr/add',
 
       // const hash = crypto.createHash('sha256').update(req.query.url).digest('base64')
       const hash = crypto.createHash('sha256').update(linkMeta.url).digest('hex')
-      const sql = 'INSERT INTO bkmrks (url, user, title, hash, favicon, created) VALUES (?, ?, ?, ?, ?, ?)'
+      const nano = nanoid()
+
+      const sql = 'INSERT INTO bkmrks (url, user, title, hash, nanoid, favicon, created) VALUES (?, ?, ?, ?, ?, ?, ?)'
 
       const data = [
         linkMeta.url,
         req.user.username,
         linkMeta.title,
         hash,
+        nano,
         linkMeta.favicon,
         linkMeta.timestamp]
       
@@ -286,18 +293,42 @@ app.get('/bkmrkr/add',
   }
 )
 
+app.get('/n/:id',
+  ensureLoggedIn('/bkmrkr/login'),
+  (req, res) => {
+    if (req.params.id && req.params.id.length == 8) {
+      const id = req.params.id
+      debug(`id is ok! ${id}`)
+      const sqlUpdate = `UPDATE bkmrks SET toread=? WHERE nanoid=?;`
+      debug(`sqlUpdate: ${sqlUpdate}`)
+      bkmrksDb.run(sqlUpdate, [ new Date().getTime(), id ], err => {
+        const sqlSelect = `SELECT url FROM bkmrks WHERE nanoid=? LIMIT 1;`
+        debug(`sqlSelect: ${sqlSelect}`)
+        bkmrksDb.all(sqlSelect, [ id ], (err, rowsSelect) => {
+          debug(`rowsSelect: `, rowsSelect)
+          debug(`redirecting to ${rowsSelect[0].url}`)
+          res.redirect(rowsSelect[0].url)
+        })
+      })
+    } else {
+      console.error(`Invalid nanoid supplied: ${req.params.id}`)
+      res.send({err: `Invalid nanoid`})
+    }
+  }
+)
+
 app.get('/bkmrkr/visit/:hash',
   ensureLoggedIn('/bkmrkr/login'),
   (req, res) => {
     if (req.params.hash && req.params.hash.length == 64) {
       const hash = req.params.hash
       debug(`hash is ok! ${hash}`)
-      const sqlUpdate = `UPDATE bkmrks SET toread='${new Date().getTime()}' WHERE hash='${hash}';`
+      const sqlUpdate = `UPDATE bkmrks SET toread=? WHERE hash=?;`
       debug(`sqlUpdate: ${sqlUpdate}`)
-      bkmrksDb.run(sqlUpdate, [], err => {
-        const sqlSelect = `SELECT url FROM bkmrks WHERE hash='${hash}';`
+      bkmrksDb.run(sqlUpdate, [ new Date().getTime(), hash ], err => {
+        const sqlSelect = `SELECT url FROM bkmrks WHERE hash=? LIMIT 1;`
         debug(`sqlSelect: ${sqlSelect}`)
-        bkmrksDb.all(sqlSelect, [], (err, rowsSelect) => {
+        bkmrksDb.all(sqlSelect, [ hash ], (err, rowsSelect) => {
           debug(`rowsSelect: `, rowsSelect)
           debug(`redirecting to ${rowsSelect[0].url}`)
           res.redirect(rowsSelect[0].url)
@@ -350,7 +381,7 @@ function formatEntry(row, format = 'card') {
         </div>
         <div class='col-md-8'>
         <div class='card-body'>
-          <p class='card-text small'><a href='./visit/${row.hash}' target='_blank'>${row.title ? row.title : row.url}</a>${row.toread && row.toread.length == 13 ? `&#128065` : ''}
+          <p class='card-text small'><a href='/n/${row.nanoid}' target='_blank' title='${row.title ? row.title : row.url}'>${row.title ? row.title : row.nanoid}</a>${row.toread && row.toread.length == 13 ? `&#128065` : ''}
           </p>
           </div>
         </div>
@@ -368,7 +399,7 @@ function formatEntry(row, format = 'card') {
 
       favicon = row.favicon ? `<span style='padding: 0px 4px 0px 4px'><img src='${row.favicon}' width='20px' height='20px'></span>` : ''
 
-      return `<li><a href='./visit/${row.hash}' target='_blank'>${favicon}${row.title ? row.title : row.url}</a> (+:${dCreated.getFullYear() == 2021 ? `${dCreated.getMonth() + 1}/${dCreated.getDate()}` : dCreated.toLocaleDateString("en-US")}${row.toread && row.toread.length == 13 ? `; &#128065: ${dRead}` : ''})`
+      return `<li><a href='/n/${row.nanoid}' target='_blank'>${favicon}${row.title ? row.title : row.url}</a> (+:${dCreated.getFullYear() == 2021 ? `${dCreated.getMonth() + 1}/${dCreated.getDate()}` : dCreated.toLocaleDateString("en-US")}${row.toread && row.toread.length == 13 ? `; &#128065: ${dRead}` : ''})`
     default:
       return `Unrecognized format: ${format}`
   }
@@ -383,7 +414,7 @@ app.get('/bkmrkr/display',
     const listFormat = req.query.format && req.query.format == 'list' ? 'list' : 'card'
 
     res.type(`html`)
-    const mainSql = `SELECT url, title, hash, toread, favicon, created FROM bkmrks WHERE user = ? ${showAll ? '' : ` AND (toread is null OR toread = 'yes')`} ORDER BY created DESC LIMIT ${showCount} OFFSET ${offset};`
+    const mainSql = `SELECT url, title, hash, nanoid, toread, favicon, created FROM bkmrks WHERE user = ? ${showAll ? '' : ` AND (toread is null OR toread = 'yes')`} ORDER BY created DESC LIMIT ${showCount} OFFSET ${offset};`
     debug(`mainSql: ${mainSql}`)
     bkmrksDb.all(mainSql,
       [
