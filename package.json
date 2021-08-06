@@ -12,6 +12,9 @@
   "bugs": {
     "url": "https://github.com/balain/bkmrkr/issues"
   },
+  "scripts": {
+    "start": "nodemon server"
+  },
   "dependencies": {
     "@meltwater/fetch-favicon": "^1.0.4",
     "bcrypt": "^5.0.0",
@@ -25,10 +28,13 @@
     "got": "^11.8.2",
     "jsdom": "^16.4.0",
     "morgan": "^1.9.1",
-    "nanoid": "^3.1.21",
+    "nanoid": "^3.1.22",
     "node-html-parser": "^3.0.3",
     "passport": "^0.4.0",
     "passport-local": "^1.0.0",
     "sqlite3": "^5.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.7"
   }
 }

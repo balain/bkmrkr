@@ -212,13 +212,15 @@ function getUrlMeta(link, counter = 1) {
           const dom = new JSDOM(response.body)
 
           debug(`...returning ${response.url}`)
+          let title = dom.window.document && dom.window.document.querySelector("title") ? dom.window.document.querySelector("title").textContent : "unset"
+
           resolve({
                 'statusMessage': response.statusMessage,
                 'statusCode': response.statusCode,
                 'ip': response.ip,
                 'url': response.url,
                 'timings': response.timings,
-                'title': dom.window.document.querySelector("title").textContent,
+                'title': title,
                 'favicon': favicon,
                 'timestamp': new Date().getTime()
               })
